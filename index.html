@@ -72,6 +72,22 @@
         <span class="play-pill">Play</span>
       </div>
     </button>
+
+    <button class="game-card" id="playRecall">
+      <div class="thumb recall-thumb">
+        <svg viewBox="0 0 200 200">
+          <rect x="28" y="28" width="64" height="64" rx="14" fill="#ff5c8a"/>
+          <rect x="108" y="28" width="64" height="64" rx="14" fill="#5cc9ff"/>
+          <rect x="28" y="108" width="64" height="64" rx="14" fill="#ffd36b"/>
+          <rect x="108" y="108" width="64" height="64" rx="14" fill="#7bff9e"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h2>The Recall</h2>
+        <p>A word flashes on screen. Noise fills the gap. Remember it anyway — 40 rounds, sneakier every time.</p>
+        <span class="play-pill">Play</span>
+      </div>
+    </button>
   </main>
 </div>
 
@@ -207,6 +223,48 @@
       <div class="shade-final-score" id="shadeFinalScore">0 / 50</div>
       <p class="shade-final-msg" id="shadeFinalMsg"></p>
       <button class="grade-btn" id="shadeReplayBtn">Play again</button>
+    </section>
+  </div>
+</div>
+
+<!-- ══════════ THE RECALL ══════════ -->
+<div id="recallView" hidden>
+  <button class="back-pill" id="backBtnRecall">&larr; FreshFun</button>
+
+  <div class="page">
+    <header class="game-header">
+      <h1>The Recall</h1>
+      <p class="sub">Watch closely. It gets harder to remember.</p>
+    </header>
+
+    <div class="shade-progress">
+      <div class="shade-progress-bar"><div class="shade-progress-fill" id="recallProgressFill"></div></div>
+      <div class="shade-progress-labels">
+        <span id="recallQNum">Question 1 of 40</span>
+        <span id="recallScoreLabel">Score: 0</span>
+      </div>
+    </div>
+
+    <section class="recall-card" id="recallCard">
+      <div class="recall-timer-bar"><div class="recall-timer-fill" id="recallTimerFill"></div></div>
+
+      <div class="recall-stage" id="recallStage">
+        <div class="recall-noise" id="recallNoise"></div>
+        <div class="recall-stimulus" id="recallStimulus"></div>
+      </div>
+
+      <div class="recall-question" id="recallQuestion" hidden>
+        <p class="recall-question-text" id="recallQuestionText"></p>
+        <div class="shade-options" id="recallOptions"></div>
+        <p class="shade-feedback" id="recallFeedback"></p>
+      </div>
+    </section>
+
+    <section class="shade-results" id="recallResults" hidden>
+      <span class="eyebrow">Final score</span>
+      <div class="shade-final-score" id="recallFinalScore">0 / 40</div>
+      <p class="shade-final-msg" id="recallFinalMsg"></p>
+      <button class="grade-btn" id="recallReplayBtn">Play again</button>
     </section>
   </div>
 </div>
