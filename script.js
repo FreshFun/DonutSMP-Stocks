@@ -5,7 +5,8 @@ const viewEls = {
   bullseye: document.getElementById('bullseyeView'),
   pull: document.getElementById('pullView'),
   shade: document.getElementById('shadeView'),
-  recall: document.getElementById('recallView')
+  recall: document.getElementById('recallView'),
+  flags: document.getElementById('flagsView')
 };
 
 function showPanel(name) {
@@ -1214,3 +1215,172 @@ function finishRecall() {
 }
 
 recallReplayBtn.addEventListener('click', openRecall);
+
+// ═══════════════════ THE FLAGS ═══════════════════
+// 30 flag emojis (rendered as native Apple-style emoji on iOS/macOS so
+// they stay crisp and colorful). Starts with the most iconic flags in
+// the world, then eases into recognizable-but-less-common ones, then
+// finishes with genuine lookalike pairs (Romania/Chad, Indonesia/Monaco,
+// Ireland/Ivory Coast, Colombia/Ecuador, Luxembourg/Netherlands,
+// Senegal/Mali) using the same trap-distractor trick as The Shade.
+
+const FLAG_QUESTIONS = [
+  // Tier 1 — instantly recognizable (Q1-8)
+  { flag: "🇯🇵", name: "Japan" },
+  { flag: "🇺🇸", name: "United States" },
+  { flag: "🇬🇧", name: "United Kingdom" },
+  { flag: "🇫🇷", name: "France" },
+  { flag: "🇩🇪", name: "Germany" },
+  { flag: "🇮🇹", name: "Italy" },
+  { flag: "🇨🇦", name: "Canada" },
+  { flag: "🇧🇷", name: "Brazil" },
+
+  // Tier 2 — widely known (Q9-16)
+  { flag: "🇨🇳", name: "China" },
+  { flag: "🇦🇺", name: "Australia" },
+  { flag: "🇲🇽", name: "Mexico" },
+  { flag: "🇪🇸", name: "Spain" },
+  { flag: "🇷🇺", name: "Russia" },
+  { flag: "🇮🇳", name: "India" },
+  { flag: "🇰🇷", name: "South Korea" },
+  { flag: "🇨🇭", name: "Switzerland" },
+
+  // Tier 3 — recognizable but less common (Q17-24)
+  { flag: "🇳🇱", name: "Netherlands" },
+  { flag: "🇸🇪", name: "Sweden" },
+  { flag: "🇬🇷", name: "Greece" },
+  { flag: "🇹🇷", name: "Turkey" },
+  { flag: "🇪🇬", name: "Egypt" },
+  { flag: "🇦🇷", name: "Argentina" },
+  { flag: "🇿🇦", name: "South Africa" },
+  { flag: "🇳🇴", name: "Norway" },
+
+  // Tier 4 — genuine lookalikes, with an "obvious" trap answer (Q25-30)
+  { flag: "🇷🇴", name: "Romania",    trap: "Chad" },
+  { flag: "🇮🇩", name: "Indonesia",  trap: "Monaco" },
+  { flag: "🇮🇪", name: "Ireland",    trap: "Ivory Coast" },
+  { flag: "🇨🇴", name: "Colombia",   trap: "Ecuador" },
+  { flag: "🇱🇺", name: "Luxembourg", trap: "Netherlands" },
+  { flag: "🇸🇳", name: "Senegal",    trap: "Mali" }
+];
+
+const FLAG_DISTRACTOR_POOL = Array.from(new Set(
+  FLAG_QUESTIONS.map(f => f.name).concat(
+    FLAG_QUESTIONS.filter(f => f.trap).map(f => f.trap),
+    ["Peru", "Venezuela", "Poland", "Thailand", "Finland", "Portugal", "Belgium", "Austria", "Denmark", "Chile"]
+  )
+));
+
+let flagsIndex = 0;
+let flagsScore = 0;
+let flagsAnswered = false;
+
+const flagDisplayEl     = document.getElementById('flagDisplay');
+const flagsOptionsEl    = document.getElementById('flagsOptions');
+const flagsFeedbackEl   = document.getElementById('flagsFeedback');
+const flagsQNum         = document.getElementById('flagsQNum');
+const flagsScoreLabel   = document.getElementById('flagsScoreLabel');
+const flagsProgressFill = document.getElementById('flagsProgressFill');
+const flagsCardEl       = document.getElementById('flagsCard');
+const flagsResultsEl    = document.getElementById('flagsResults');
+const flagsFinalScore   = document.getElementById('flagsFinalScore');
+const flagsFinalMsg     = document.getElementById('flagsFinalMsg');
+const flagsReplayBtn    = document.getElementById('flagsReplayBtn');
+
+function openFlags() {
+  showPanel('flags');
+  document.body.className = 'view-flags';
+  flagsIndex = 0;
+  flagsScore = 0;
+  flagsCardEl.hidden = false;
+  flagsResultsEl.hidden = true;
+  loadFlagQuestion();
+}
+document.getElementById('playFlags').addEventListener('click', openFlags);
+
+function pickFlagOptions(index) {
+  const correct = FLAG_QUESTIONS[index];
+  const used = new Set([correct.name]);
+  const options = [correct.name];
+
+  if (correct.trap && !used.has(correct.trap)) {
+    used.add(correct.trap);
+    options.push(correct.trap);
+  }
+
+  let guard = 0;
+  while (options.length < 4 && guard < 500) {
+    guard++;
+    const candidate = randomFrom(FLAG_DISTRACTOR_POOL);
+    if (!used.has(candidate)) {
+      used.add(candidate);
+      options.push(candidate);
+    }
+  }
+
+  const order = shuffledOrder(options.length);
+  return order.map(i => options[i]);
+}
+
+function loadFlagQuestion() {
+  flagsAnswered = false;
+  const f = FLAG_QUESTIONS[flagsIndex];
+  flagDisplayEl.textContent = f.flag;
+  flagsQNum.textContent = "Question " + (flagsIndex + 1) + " of " + FLAG_QUESTIONS.length;
+  flagsScoreLabel.textContent = "Score: " + flagsScore;
+  flagsProgressFill.style.width = (flagsIndex / FLAG_QUESTIONS.length * 100) + "%";
+  flagsFeedbackEl.textContent = "";
+
+  flagsOptionsEl.innerHTML = "";
+  pickFlagOptions(flagsIndex).forEach(name => {
+    const btn = document.createElement('button');
+    btn.textContent = name;
+    btn.addEventListener('click', () => answerFlag(name, btn));
+    flagsOptionsEl.appendChild(btn);
+  });
+}
+
+function answerFlag(chosen, btnEl) {
+  if (flagsAnswered) return;
+  flagsAnswered = true;
+  const f = FLAG_QUESTIONS[flagsIndex];
+  const isCorrect = chosen === f.name;
+  if (isCorrect) flagsScore++;
+
+  [...flagsOptionsEl.children].forEach(btn => {
+    btn.disabled = true;
+    if (btn.textContent === f.name) btn.classList.add('correct');
+    else if (btn === btnEl) btn.classList.add('wrong');
+  });
+
+  flagsFeedbackEl.textContent = isCorrect
+    ? "Yes — that's " + f.name + "."
+    : "Nope — that's " + f.name + ".";
+  flagsScoreLabel.textContent = "Score: " + flagsScore;
+
+  setTimeout(() => {
+    flagsIndex++;
+    if (flagsIndex >= FLAG_QUESTIONS.length) {
+      finishFlags();
+    } else {
+      loadFlagQuestion();
+    }
+  }, 1100);
+}
+
+function finishFlags() {
+  flagsProgressFill.style.width = "100%";
+  flagsCardEl.hidden = true;
+  flagsResultsEl.hidden = false;
+  flagsFinalScore.textContent = flagsScore + " / " + FLAG_QUESTIONS.length;
+
+  const pct = flagsScore / FLAG_QUESTIONS.length;
+  let msg;
+  if (pct >= 0.9) msg = "Practically a cartographer. The lookalikes didn't fool you.";
+  else if (pct >= 0.7) msg = "Well traveled — most of the tricky ones didn't get past you.";
+  else if (pct >= 0.5) msg = "Solid run. Those last few lookalike flags are brutal.";
+  else msg = "The final stretch is a trap by design — give it another go.";
+  flagsFinalMsg.textContent = msg;
+}
+
+flagsReplayBtn.addEventListener('click', openFlags);
