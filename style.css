@@ -1,3 +1,8 @@
+Found it. Your `style.css` is missing the entire "THE POLL" section — both the `body.view-poll` theme block and the `.poll-card` / `.poll-options` / `.poll-option` / `.poll-bar` styles are just not in the file at all. It jumps straight from "THE DRAW" to "THE RECALL" with nothing in between. That's exactly why the buttons render as bare unstyled text — there's no CSS rule for them to match, so the browser falls back to its own default. (Also missing: the `.poll-thumb svg` sizing line for the hub card icon, but that's cosmetic.)
+
+This looks like an older paste got used instead of the latest one. Easiest fix: replace your whole `style.css` with the version below — it's identical to what you have plus the missing Poll block restored.
+
+```css
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body { width:100%; min-height:100%; }
 body {
@@ -78,6 +83,14 @@ body.view-draw {
   color:#2b3a55;
 }
 
+/* ── poll theme: same light neutral as hub ── */
+body.view-poll {
+  background:#f4f7fb;
+  background-image:radial-gradient(rgba(120,150,200,0.12) 1.5px, transparent 1.5px);
+  background-size:26px 26px;
+  color:#2b3a55;
+}
+
 /* ══════════ HUB ══════════ */
 header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36px); }
 .logo {
@@ -125,6 +138,7 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
 .flag-thumb { gap:6px; }
 .flag-thumb span { font-size:52px; line-height:1; }
 .draw-thumb svg { width:90px; height:90px; color:#2f8fff; }
+.poll-thumb svg { width:100px; height:100px; }
 
 .card-body { padding:18px 20px 22px; }
 .card-body h2 {
@@ -596,6 +610,64 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
 .draw-tool-btn:hover { border-color:#2f8fff; color:#2f8fff; }
 .draw-tool-btn:focus-visible { outline:3px solid #2f8fff; outline-offset:3px; }
 
+/* ══════════ THE POLL ══════════ */
+.poll-card {
+  background:#ffffff; color:#2b3a55;
+  border-radius:22px; padding:30px 26px;
+  text-align:center;
+  box-shadow:0 10px 30px rgba(43,58,85,0.16);
+}
+
+.poll-question {
+  font-family:'Fredoka',sans-serif; font-weight:600;
+  font-size:20px; margin-bottom:24px;
+}
+
+.poll-options {
+  display:flex; align-items:center; justify-content:center;
+  gap:16px;
+}
+.poll-option {
+  flex:1; max-width:200px;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  font-family:'Nunito',sans-serif;
+  border:2px solid #d5deec; background:#f4f7fb; color:#2b3a55;
+  border-radius:18px; padding:24px 14px;
+  cursor:pointer;
+  transition:border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+.poll-option:hover:not(:disabled) { border-color:#2f8fff; transform:translateY(-3px); }
+.poll-option:disabled { cursor:default; }
+.poll-option-emoji { font-size:46px; line-height:1; }
+.poll-option-label { font-weight:800; font-size:15.5px; }
+
+.poll-option.picked { border-color:#2f8fff; box-shadow:0 0 0 3px rgba(47,143,255,0.2); }
+.poll-option.winner { background:#e3f7ec; border-color:#3ecf8e; }
+.poll-option.loser { background:#fbe7e2; border-color:#e8604c; opacity:0.85; }
+
+.poll-vs {
+  font-family:'Fredoka',sans-serif; font-weight:700; font-size:15px;
+  color:#9aa4b2; letter-spacing:0.05em;
+}
+
+.poll-result { margin-top:26px; }
+.poll-bar {
+  display:flex; height:22px; border-radius:999px; overflow:hidden;
+  background:rgba(43,58,85,0.08);
+}
+.poll-bar-fill { height:100%; width:0%; transition:width 0.6s ease; }
+.poll-bar-a { background:#2f8fff; }
+.poll-bar-b { background:#ff5c8a; }
+
+.poll-pcts {
+  display:flex; justify-content:space-between;
+  margin-top:8px; font-weight:800; font-size:14.5px;
+}
+
+.poll-feedback {
+  margin-top:18px; font-weight:700; font-size:15.5px;
+}
+
 /* ══════════ THE RECALL ══════════ */
 .recall-card {
   background:#ffffff; color:#2b3a55;
@@ -667,3 +739,6 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
   .recall-noise-letter { animation:none; opacity:0.4; }
   .recall-timer-fill { transition:none !important; }
 }
+```
+
+Replace the whole file with this, commit, and The Poll should render correctly.
