@@ -114,6 +114,20 @@
         <span class="play-pill">Play</span>
       </div>
     </button>
+
+    <button class="game-card" id="playPoll">
+      <div class="thumb poll-thumb">
+        <svg viewBox="0 0 200 200">
+          <rect x="40" y="90" width="46" height="80" rx="8" fill="#2f8fff"/>
+          <rect x="114" y="50" width="46" height="120" rx="8" fill="#ff5c8a"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h2>The Poll</h2>
+        <p>Pick whichever you think is more popular. See the real split — and how close you got.</p>
+        <span class="play-pill">Play</span>
+      </div>
+    </button>
   </main>
 </div>
 
@@ -362,6 +376,62 @@
       <p class="score-feedback" id="drawScoreFeedback"></p>
       <div class="traits" id="drawTraitsList"></div>
       <button class="next-btn" id="drawNextBtn">Next prompt &rarr;</button>
+    </section>
+  </div>
+</div>
+
+<!-- ══════════ THE POLL ══════════ -->
+<div id="pollView" hidden>
+  <button class="back-pill" id="backBtnPoll">&larr; FreshFun</button>
+
+  <div class="page">
+    <header class="game-header">
+      <h1>The Poll</h1>
+      <p class="sub">Pick the more popular one. Then see the real split.</p>
+    </header>
+
+    <div class="shade-progress">
+      <div class="shade-progress-bar"><div class="shade-progress-fill" id="pollProgressFill"></div></div>
+      <div class="shade-progress-labels">
+        <span id="pollQNum">Question 1 of 20</span>
+        <span id="pollScoreLabel">Score: 0</span>
+      </div>
+    </div>
+
+    <section class="poll-card" id="pollCard">
+      <p class="poll-question" id="pollQuestion">Which is more popular?</p>
+
+      <div class="poll-options">
+        <button class="poll-option" id="pollOptionA">
+          <span class="poll-option-emoji" id="pollEmojiA">🔴</span>
+          <span class="poll-option-label" id="pollLabelA">Red</span>
+        </button>
+        <span class="poll-vs">VS</span>
+        <button class="poll-option" id="pollOptionB">
+          <span class="poll-option-emoji" id="pollEmojiB">🔵</span>
+          <span class="poll-option-label" id="pollLabelB">Blue</span>
+        </button>
+      </div>
+
+      <div class="poll-result" id="pollResult" hidden>
+        <div class="poll-bar" id="pollBar">
+          <div class="poll-bar-fill poll-bar-a" id="pollBarA"></div>
+          <div class="poll-bar-fill poll-bar-b" id="pollBarB"></div>
+        </div>
+        <div class="poll-pcts">
+          <span id="pollPctA">Red 30%</span>
+          <span id="pollPctB">Blue 70%</span>
+        </div>
+        <p class="poll-feedback" id="pollFeedback"></p>
+        <button class="next-btn" id="pollNextBtn">Next &rarr;</button>
+      </div>
+    </section>
+
+    <section class="shade-results" id="pollResults" hidden>
+      <span class="eyebrow">Final score</span>
+      <div class="shade-final-score" id="pollFinalScore">0 / 20</div>
+      <p class="shade-final-msg" id="pollFinalMsg"></p>
+      <button class="grade-btn" id="pollReplayBtn">Play again</button>
     </section>
   </div>
 </div>
