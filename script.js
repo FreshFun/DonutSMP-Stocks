@@ -1,27 +1,26 @@
 // ═══════════════════ VIEW SWITCHING ═══════════════════
-const hubView  = document.getElementById('hubView');
-const gameView = document.getElementById('gameView');
-const backBtn  = document.getElementById('backBtn');
-const playBtn  = document.getElementById('playTimeline');
+const viewEls = {
+  hub: document.getElementById('hubView'),
+  timeline: document.getElementById('gameView'),
+  bullseye: document.getElementById('bullseyeView')
+};
 
-function openGame() {
-  hubView.hidden = true;
-  gameView.hidden = false;
-  document.body.className = 'view-game t0';
-  selectScenario(0);
+function showPanel(name) {
+  Object.values(viewEls).forEach(el => { el.hidden = true; });
+  viewEls[name].hidden = false;
 }
-function closeGame() {
-  gameView.hidden = true;
-  hubView.hidden = false;
+
+function goHome() {
+  showPanel('hub');
   document.body.className = 'view-hub';
 }
-playBtn.addEventListener('click', openGame);
-backBtn.addEventListener('click', closeGame);
+
+document.querySelectorAll('.back-pill').forEach(btn => btn.addEventListener('click', goHome));
 window.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !gameView.hidden) closeGame();
+  if (e.key === 'Escape' && viewEls.hub.hidden) goHome();
 });
 
-// ═══════════════════ HUB THUMBNAIL ═══════════════════
+// ═══════════════════ HUB THUMBNAIL (Timeline card) ═══════════════════
 const canvas = document.getElementById('timelineThumb');
 if (canvas) {
   const ctx = canvas.getContext('2d');
@@ -228,7 +227,7 @@ function selectScenario(i) {
   [...tabsEl.children].forEach((b, j) => b.classList.toggle("active", j === i));
   eventEl.textContent = SCENARIOS[i].event;
   buildChips();
-  render(false);
+  renderTimeline(false);
 }
 
 function buildChips() {
@@ -241,7 +240,7 @@ function buildChips() {
       toggles[v.key] = !toggles[v.key];
       b.classList.toggle("on", toggles[v.key]);
       b.setAttribute("aria-pressed", String(toggles[v.key]));
-      render(true);
+      renderTimeline(true);
     });
     chipsEl.appendChild(b);
   });
@@ -249,10 +248,10 @@ function buildChips() {
 
 slider.addEventListener("input", () => {
   stage = Number(slider.value);
-  render(false);
+  renderTimeline(false);
 });
 
-function render(ripple) {
+function renderTimeline(ripple) {
   document.body.className = "view-game t" + stage;
   yearEl.textContent = YEARS[stage];
 
@@ -278,3 +277,327 @@ function render(ripple) {
 
   hintEl.classList.toggle("hidden", stage > 0);
 }
+
+function openTimeline() {
+  showPanel('timeline');
+  selectScenario(0);
+}
+document.getElementById('playTimeline').addEventListener('click', openTimeline);
+
+// ═══════════════════ THE BULLSEYE ═══════════════════
+
+// hand-drawn ink-line SVG specimens (no external images needed)
+const SVG = {
+  cat: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M55 70 L40 25 L85 55"/>
+    <path d="M145 70 L160 25 L115 55"/>
+    <circle cx="100" cy="110" r="60"/>
+    <circle cx="78" cy="100" r="5" fill="currentColor"/>
+    <circle cx="122" cy="100" r="5" fill="currentColor"/>
+    <path d="M95 120 L105 120 L100 128 Z" fill="currentColor"/>
+    <path d="M60 125 L20 118 M60 132 L20 135 M140 125 L180 118 M140 132 L180 135"/>
+    <path d="M100 128 Q90 140 78 132 M100 128 Q110 140 122 132"/>
+  </svg>`,
+  dog: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="100" cy="115" rx="58" ry="52"/>
+    <path d="M50 90 Q20 100 35 150 Q55 145 60 110 Z"/>
+    <path d="M150 90 Q180 100 165 150 Q145 145 140 110 Z"/>
+    <circle cx="80" cy="105" r="5" fill="currentColor"/>
+    <circle cx="120" cy="105" r="5" fill="currentColor"/>
+    <ellipse cx="100" cy="135" rx="30" ry="20"/>
+    <ellipse cx="100" cy="130" rx="8" ry="6" fill="currentColor"/>
+    <path d="M92 140 Q100 148 108 140"/>
+    <path d="M100 148 L100 156"/>
+  </svg>`,
+  castle: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 170 L40 90 L55 90 L55 75 L70 75 L70 90 L90 90 L90 60 L110 60 L110 90 L130 90 L130 75 L145 75 L145 90 L160 90 L160 170 Z"/>
+    <path d="M90 170 L90 130 Q100 118 110 130 L110 170"/>
+    <path d="M110 60 L125 45 M110 45 L125 60"/>
+  </svg>`,
+  person: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="100" cy="55" r="30"/>
+    <path d="M100 85 L100 130"/>
+    <path d="M100 100 L60 130 M100 100 L140 130"/>
+    <path d="M100 130 L70 175 M100 130 L130 175"/>
+  </svg>`,
+  tree: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100 185 L100 120"/>
+    <circle cx="75" cy="95" r="35"/>
+    <circle cx="125" cy="95" r="35"/>
+    <circle cx="100" cy="65" r="38"/>
+  </svg>`,
+  house: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 100 L100 50 L160 100"/>
+    <path d="M55 95 L55 165 L145 165 L145 95"/>
+    <rect x="90" y="120" width="20" height="45"/>
+    <rect x="65" y="110" width="20" height="20"/>
+    <rect x="115" y="110" width="20" height="20"/>
+  </svg>`,
+  bird: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="100" cy="120" rx="45" ry="35"/>
+    <circle cx="145" cy="95" r="20"/>
+    <path d="M165 95 L185 90 L165 100 Z" fill="currentColor"/>
+    <circle cx="150" cy="90" r="3" fill="currentColor"/>
+    <path d="M70 130 Q40 120 30 145 Q55 150 75 140"/>
+    <path d="M75 150 L60 175 M95 155 L88 178 M115 155 L122 178"/>
+  </svg>`,
+  chair: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 40 L60 110"/>
+    <path d="M60 40 L140 40"/>
+    <path d="M55 110 L145 110 L135 175 L120 175 L125 130 L75 130 L80 175 L65 175 Z"/>
+  </svg>`,
+  mountain: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 165 L75 70 L105 110 L130 60 L185 165 Z"/>
+    <path d="M120 80 L130 60 L140 80 L130 90 Z" fill="currentColor"/>
+  </svg>`,
+  ocean: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="150" cy="55" r="22"/>
+    <path d="M20 110 Q45 95 70 110 T120 110 T170 110"/>
+    <path d="M20 140 Q45 125 70 140 T120 140 T170 140"/>
+    <path d="M20 170 Q45 155 70 170 T120 170 T170 170"/>
+  </svg>`,
+  key: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="60" cy="60" r="30"/>
+    <path d="M85 85 L165 165"/>
+    <path d="M140 140 L155 125 M155 155 L170 140"/>
+  </svg>`,
+  umbrella: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30 100 Q100 30 170 100 Z"/>
+    <path d="M100 100 L100 175 Q100 190 85 185"/>
+    <path d="M60 100 L60 90 M100 100 L100 75 M140 100 L140 90"/>
+  </svg>`
+};
+
+// each word: 4 weighted concept groups (must sum to 100) + a "vague" list
+// that only earns a small floor score if nothing specific is matched
+const BULLSEYE_WORDS = [
+  {
+    word: "cat",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["feline", "cat family", "felidae", "carnivorous mammal"] },
+      { label: "Relationship to people", weight: 30, keywords: ["domesticat", "companion animal", "housepet", "house pet", "kept as a pet"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["whisker", "claw", "purr", "meow", "retractable claw", "fur", "tail"] },
+      { label: "Extra nuance", weight: 15, keywords: ["nocturnal", "independent", "agile", "hunts", "predator", "small prey"] }
+    ],
+    vague: ["animal", "creature", "thing", "mammal", "pet"]
+  },
+  {
+    word: "dog",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["canine", "dog family", "canidae", "descendant of wolves", "domesticated wolf"] },
+      { label: "Relationship to people", weight: 30, keywords: ["domesticat", "companion animal", "housepet", "house pet", "loyal companion", "man's best friend"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["bark", "tail wag", "wags its tail", "fur", "snout", "paws", "four legs"] },
+      { label: "Extra nuance", weight: 15, keywords: ["trainable", "loyal", "pack animal", "obedient", "guard", "herding"] }
+    ],
+    vague: ["animal", "creature", "thing", "mammal", "pet"]
+  },
+  {
+    word: "castle",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["fortified structure", "fortress", "stronghold", "fortification", "stone building"] },
+      { label: "Purpose", weight: 30, keywords: ["defens", "protect", "military stronghold", "royal residence", "noble residence", "royalty lived"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["tower", "turret", "moat", "drawbridge", "battlement", "rampart"] },
+      { label: "Extra nuance", weight: 15, keywords: ["medieval", "middle ages", "historic"] }
+    ],
+    vague: ["building", "structure", "place", "thing"]
+  },
+  {
+    word: "person",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["human being", "homo sapiens", "human"] },
+      { label: "Defining trait", weight: 30, keywords: ["conscious", "sentient", "rational", "capable of thought", "self aware", "intelligent being"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["bipedal", "two legs", "upright", "walks on two"] },
+      { label: "Extra nuance", weight: 15, keywords: ["member of society", "social being", "community"] }
+    ],
+    vague: ["thing", "creature", "being", "mammal"]
+  },
+  {
+    word: "tree",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["plant", "perennial plant", "woody plant", "living organism"] },
+      { label: "Purpose / function", weight: 30, keywords: ["photosynthes", "produces oxygen", "absorbs carbon dioxide", "grows leaves"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["trunk", "branch", "root", "bark"] },
+      { label: "Extra nuance", weight: 15, keywords: ["perennial", "long lived", "woody", "tall"] }
+    ],
+    vague: ["plant", "thing", "nature"]
+  },
+  {
+    word: "house",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["building", "structure", "dwelling", "residential building"] },
+      { label: "Purpose", weight: 30, keywords: ["shelter", "lived in by people", "residence", "home for a family", "place people live", "people live in"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["roof", "wall", "room", "window", "door"] },
+      { label: "Extra nuance", weight: 15, keywords: ["permanent structure", "built", "foundation"] }
+    ],
+    vague: ["building", "place", "structure", "thing"]
+  },
+  {
+    word: "bird",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["avian", "feathered animal", "warm blooded vertebrate"] },
+      { label: "Defining trait", weight: 30, keywords: ["capable of flight", "can fly", "flies", "migrat"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["feather", "wing", "beak", "lays eggs"] },
+      { label: "Extra nuance", weight: 15, keywords: ["hollow bone", "sings", "migrates"] }
+    ],
+    vague: ["animal", "creature", "thing"]
+  },
+  {
+    word: "chair",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["furniture", "piece of furniture", "seat"] },
+      { label: "Purpose", weight: 30, keywords: ["sit on", "used for sitting", "supports a person while seated", "for sitting"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["leg", "backrest", "seat surface", "armrest"] },
+      { label: "Extra nuance", weight: 15, keywords: ["made of wood", "made of metal", "portable"] }
+    ],
+    vague: ["thing", "object", "furniture"]
+  },
+  {
+    word: "mountain",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["landform", "natural elevation", "geological formation"] },
+      { label: "Formation", weight: 30, keywords: ["formed by tectonic", "volcanic", "geological process"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["peak", "summit", "steep slope", "rocky"] },
+      { label: "Extra nuance", weight: 15, keywords: ["snow cap", "higher than a hill", "large"] }
+    ],
+    vague: ["big thing", "nature", "thing", "place"]
+  },
+  {
+    word: "ocean",
+    concepts: [
+      { label: "Category", weight: 30, keywords: ["large body of saltwater", "body of water", "marine environment"] },
+      { label: "Scale", weight: 25, keywords: ["covers most of earth", "connects continents", "home to marine life"] },
+      { label: "Distinguishing features", weight: 30, keywords: ["saltwater", "wave", "tide", "fish", "marine life"] },
+      { label: "Extra nuance", weight: 15, keywords: ["vast", "deep", "enormous"] }
+    ],
+    vague: ["water", "thing", "nature", "big"]
+  },
+  {
+    word: "key",
+    concepts: [
+      { label: "Category", weight: 25, keywords: ["metal tool", "small tool", "device"] },
+      { label: "Purpose", weight: 35, keywords: ["opens locks", "unlocks a door", "used to lock or unlock", "locks or unlocks"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["teeth", "notch", "ridge", "inserted into a lock"] },
+      { label: "Extra nuance", weight: 15, keywords: ["portable", "paired with a specific lock", "specific to one lock"] }
+    ],
+    vague: ["tool", "thing", "object", "metal"]
+  },
+  {
+    word: "umbrella",
+    concepts: [
+      { label: "Category", weight: 25, keywords: ["portable device", "handheld device", "canopy device"] },
+      { label: "Purpose", weight: 35, keywords: ["protects from rain", "shields from rain", "keeps you dry", "blocks the sun", "protects from sun"] },
+      { label: "Distinguishing features", weight: 25, keywords: ["collapsible", "rib", "handle", "fabric canopy", "canopy"] },
+      { label: "Extra nuance", weight: 15, keywords: ["portable", "folds", "carried by hand"] }
+    ],
+    vague: ["thing", "object", "tool"]
+  }
+];
+
+let bIdx = 0;
+let bOrder = [];
+let bPos = 0;
+
+const specimenNum   = document.getElementById('specimenNum');
+const specimenSvg   = document.getElementById('specimenSvg');
+const specimenWord  = document.getElementById('specimenWord');
+const answerBox     = document.getElementById('answerBox');
+const gradeBtn      = document.getElementById('gradeBtn');
+const resultCard    = document.getElementById('resultCard');
+const scoreRing     = document.getElementById('scoreRing');
+const scoreNum      = document.getElementById('scoreNum');
+const scoreFeedback = document.getElementById('scoreFeedback');
+const traitsList    = document.getElementById('traitsList');
+const nextBtn       = document.getElementById('nextBtn');
+
+function shuffledOrder(n) {
+  const arr = Array.from({ length: n }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function openBullseye() {
+  showPanel('bullseye');
+  document.body.className = 'view-bullseye';
+  bOrder = shuffledOrder(BULLSEYE_WORDS.length);
+  bPos = 0;
+  loadSpecimen();
+}
+document.getElementById('playBullseye').addEventListener('click', openBullseye);
+
+function loadSpecimen() {
+  if (bPos >= bOrder.length) {
+    bOrder = shuffledOrder(BULLSEYE_WORDS.length);
+    bPos = 0;
+  }
+  bIdx = bOrder[bPos];
+  const w = BULLSEYE_WORDS[bIdx];
+  specimenNum.textContent = "Specimen No. " + (bPos + 1);
+  specimenSvg.innerHTML = SVG[w.word];
+  specimenWord.textContent = w.word;
+  answerBox.value = "";
+  resultCard.hidden = true;
+}
+
+function gradeAnswer() {
+  const w = BULLSEYE_WORDS[bIdx];
+  const raw = answerBox.value.trim();
+  if (!raw) { answerBox.focus(); return; }
+
+  const norm = " " + raw.toLowerCase().replace(/[^a-z0-9\s]/g, " ") + " ";
+  let score = 0;
+  const matched = [];
+  const missed = [];
+
+  w.concepts.forEach(c => {
+    const hit = c.keywords.some(k => norm.includes(k));
+    if (hit) { score += c.weight; matched.push(c.label); }
+    else missed.push(c.label);
+  });
+
+  const wordCount = raw.split(/\s+/).filter(Boolean).length;
+  if (wordCount < 4) score = Math.min(score, 40);
+
+  if (matched.length === 0) {
+    const vagueHit = w.vague.some(v => norm.includes(v));
+    score = vagueHit ? 12 : score;
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  let color, feedback;
+  if (score >= 90)      { color = "#3ecf8e"; feedback = "Nailed it — that's exactly what it is."; }
+  else if (score >= 70) { color = "#7bc86c"; feedback = "Really close — just missing a detail or two."; }
+  else if (score >= 45) { color = "#ffb648"; feedback = "On the right track, but still pretty general."; }
+  else if (score >= 20) { color = "#ff8a5c"; feedback = "Too vague — that could describe a bunch of things."; }
+  else                  { color = "#e8604c"; feedback = "Way too generic. What actually makes it unique?"; }
+
+  scoreRing.style.setProperty('--pct', score);
+  scoreRing.style.setProperty('--ring-color', color);
+  scoreNum.textContent = score + "%";
+  scoreFeedback.textContent = feedback;
+
+  traitsList.innerHTML = "";
+  matched.forEach(m => {
+    const chip = document.createElement('span');
+    chip.className = "trait hit";
+    chip.textContent = "✓ " + m;
+    traitsList.appendChild(chip);
+  });
+  missed.forEach(m => {
+    const chip = document.createElement('span');
+    chip.className = "trait miss";
+    chip.textContent = "✕ " + m;
+    traitsList.appendChild(chip);
+  });
+
+  resultCard.hidden = false;
+}
+
+gradeBtn.addEventListener('click', gradeAnswer);
+nextBtn.addEventListener('click', () => { bPos++; loadSpecimen(); });
+answerBox.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) gradeAnswer();
+});
