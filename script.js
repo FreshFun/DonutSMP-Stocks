@@ -2,7 +2,8 @@
 const viewEls = {
   hub: document.getElementById('hubView'),
   timeline: document.getElementById('gameView'),
-  bullseye: document.getElementById('bullseyeView')
+  bullseye: document.getElementById('bullseyeView'),
+  pull: document.getElementById('pullView')
 };
 
 function showPanel(name) {
@@ -286,7 +287,6 @@ document.getElementById('playTimeline').addEventListener('click', openTimeline);
 
 // ═══════════════════ THE BULLSEYE ═══════════════════
 
-// hand-drawn ink-line SVG specimens (no external images needed)
 const SVG = {
   cat: `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M55 70 L40 25 L85 55"/>
@@ -368,8 +368,6 @@ const SVG = {
   </svg>`
 };
 
-// each word: 4 weighted concept groups (must sum to 100) + a "vague" list
-// that only earns a small floor score if nothing specific is matched
 const BULLSEYE_WORDS = [
   {
     word: "cat",
@@ -601,3 +599,165 @@ nextBtn.addEventListener('click', () => { bPos++; loadSpecimen(); });
 answerBox.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) gradeAnswer();
 });
+
+// ═══════════════════ THE PULL ═══════════════════
+
+const RARITIES = [
+  { key: "common",      name: "Common",      oneInX: 2 },
+  { key: "uncommon",    name: "Uncommon",    oneInX: 5 },
+  { key: "unusual",     name: "Unusual",     oneInX: 12 },
+  { key: "rare",        name: "Rare",        oneInX: 30 },
+  { key: "veryrare",    name: "Very Rare",   oneInX: 75 },
+  { key: "epic",        name: "Epic",        oneInX: 200 },
+  { key: "legendary",   name: "Legendary",   oneInX: 500 },
+  { key: "mythical",    name: "Mythical",    oneInX: 1500 },
+  { key: "ethereal",    name: "Ethereal",    oneInX: 5000 },
+  { key: "prismatic",   name: "Prismatic",   oneInX: 15000 },
+  { key: "ultra",       name: "ULTRA",       oneInX: 50000 },
+  { key: "quantum",     name: "Quantum",     oneInX: 200000 },
+  { key: "singularity", name: "Singularity", oneInX: 1000000 }
+];
+
+const TIER_PARTICLE_COLORS = {
+  epic:        ["#c23cff", "#e0a3ff"],
+  legendary:   ["#ffd36b", "#ff9a3c"],
+  mythical:    ["#ff4d6d", "#ff8a3c"],
+  ethereal:    ["#b8faff", "#ffffff"],
+  prismatic:   ["#ff5c8a", "#ffd36b", "#7bff9e", "#5cc9ff", "#b07cff"],
+  ultra:       ["#00e5ff", "#ff2ec4"],
+  quantum:     ["#7effc4", "#00e5ff", "#c86bff"],
+  singularity: ["#ffffff", "#ff5c8a", "#ffd36b", "#7bff9e", "#5cc9ff", "#b07cff"]
+};
+
+let pullCountVal = 0;
+let bestIdx = -1;
+const discovered = new Set();
+
+const pullOrb      = document.getElementById('pullOrb');
+const pullResult    = document.getElementById('pullResult');
+const pullTier      = document.getElementById('pullTier');
+const pullOdds      = document.getElementById('pullOdds');
+const pullBtn       = document.getElementById('pullBtn');
+const pullCountEl   = document.getElementById('pullCount');
+const pullBestEl    = document.getElementById('pullBest');
+const pullLegend    = document.getElementById('pullLegend');
+const pullStage     = document.querySelector('.pull-stage');
+
+function buildLegend() {
+  pullLegend.innerHTML = "";
+  RARITIES.forEach((r, i) => {
+    const item = document.createElement('span');
+    item.className = "legend-item";
+    item.style.color = legendColor(r.key);
+    item.textContent = r.name + " · 1 in " + r.oneInX.toLocaleString();
+    item.dataset.index = i;
+    pullLegend.appendChild(item);
+  });
+}
+
+function legendColor(key) {
+  const map = {
+    common: "#9aa4b2", uncommon: "#3ecf8e", unusual: "#2bc4c4", rare: "#2f8fff",
+    veryrare: "#8a5cff", epic: "#c23cff", legendary: "#ffb648", mythical: "#ff4d6d",
+    ethereal: "#b8faff", prismatic: "#ff8fd6", ultra: "#00e5ff", quantum: "#c86bff",
+    singularity: "#ffffff"
+  };
+  return map[key] || "#ffffff";
+}
+
+function updateLegend() {
+  [...pullLegend.children].forEach(el => {
+    const i = Number(el.dataset.index);
+    el.classList.toggle('discovered', discovered.has(i));
+  });
+}
+
+function weightedPick() {
+  const weights = RARITIES.map(r => 1 / r.oneInX);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < RARITIES.length; i++) {
+    if (r < weights[i]) return i;
+    r -= weights[i];
+  }
+  return RARITIES.length - 1;
+}
+
+function spawnParticles(count, colors) {
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('span');
+    p.className = 'particle';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 60 + Math.random() * 100;
+    p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    pullStage.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
+}
+
+function doPull() {
+  pullBtn.disabled = true;
+  pullResult.hidden = true;
+  pullOrb.classList.remove('spinning');
+  void pullOrb.offsetWidth; // restart animation
+  pullOrb.classList.add('spinning');
+
+  const finalIdx = weightedPick();
+  const flickerMs = 1100;
+  const stepMs = 60;
+  let elapsed = 0;
+
+  const flicker = setInterval(() => {
+    const r = RARITIES[Math.floor(Math.random() * RARITIES.length)];
+    pullTier.textContent = r.name;
+    pullTier.className = "pull-tier tier-" + r.key;
+    pullResult.hidden = false;
+    elapsed += stepMs;
+    if (elapsed >= flickerMs) {
+      clearInterval(flicker);
+      reveal(finalIdx);
+    }
+  }, stepMs);
+}
+
+function reveal(idx) {
+  const r = RARITIES[idx];
+  pullTier.textContent = r.name;
+  pullTier.className = "pull-tier tier-" + r.key;
+  pullOdds.textContent = "1 in " + r.oneInX.toLocaleString() + " chance";
+  pullResult.hidden = false;
+
+  pullCountVal++;
+  pullCountEl.textContent = pullCountVal;
+
+  if (idx > bestIdx) {
+    bestIdx = idx;
+    pullBestEl.textContent = RARITIES[bestIdx].name;
+    pullBestEl.style.color = legendColor(RARITIES[bestIdx].key);
+  }
+
+  discovered.add(idx);
+  updateLegend();
+
+  if (idx >= 5) { // Epic and above get a particle burst
+    const colors = TIER_PARTICLE_COLORS[r.key] || ["#ffffff"];
+    spawnParticles(10 + idx * 3, colors);
+  }
+  if (idx === RARITIES.length - 1) { // Singularity
+    document.body.classList.add('shake');
+    setTimeout(() => document.body.classList.remove('shake'), 420);
+  }
+
+  pullBtn.disabled = false;
+}
+
+function openPull() {
+  showPanel('pull');
+  document.body.className = 'view-pull';
+}
+document.getElementById('playPull').addEventListener('click', openPull);
+
+pullBtn.addEventListener('click', doPull);
+buildLegend();
