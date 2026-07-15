@@ -7,50 +7,85 @@
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="view-hub">
 
-<header>
-  <div class="logo"><span class="fresh">FreshFun</span> Games</div>
-  <p class="tagline">Little games. Big fun. No downloads.</p>
-</header>
+<!-- ══════════ HUB ══════════ -->
+<div id="hubView">
+  <header>
+    <div class="logo"><span class="fresh">FreshFun</span> Games</div>
+    <p class="tagline">Little games. Big fun. No downloads.</p>
+  </header>
 
-<main class="games">
+  <main class="games">
+    <button class="game-card" id="playTimeline">
+      <div class="thumb">
+        <canvas id="timelineThumb" width="300" height="170"></canvas>
+      </div>
+      <div class="card-body">
+        <h2>The Timeline</h2>
+        <p>Nudge one tiny moment, then slide 100 years into the future and watch the world unravel.</p>
+        <span class="play-pill">Play</span>
+      </div>
+    </button>
 
-  <!-- The Timeline -->
-  <button class="game-card" data-game="timeline/index.html" data-title="The Timeline">
-    <div class="thumb">
-      <canvas id="timelineThumb" width="300" height="170"></canvas>
+    <div class="game-card soon">
+      <div class="thumb soon-thumb"><span>?</span></div>
+      <div class="card-body">
+        <h2>Coming soon</h2>
+        <p>A new game is brewing. Check back later!</p>
+      </div>
     </div>
-    <div class="card-body">
-      <h2>The Timeline</h2>
-      <p>Nudge one tiny moment, then slide 100 years into the future and watch the world unravel.</p>
-      <span class="play-pill">Play</span>
+
+    <div class="game-card soon">
+      <div class="thumb soon-thumb"><span>?</span></div>
+      <div class="card-body">
+        <h2>Coming soon</h2>
+        <p>A new game is brewing. Check back later!</p>
+      </div>
     </div>
-  </button>
+  </main>
+</div>
 
-  <!-- Coming soon -->
-  <div class="game-card soon">
-    <div class="thumb soon-thumb"><span>?</span></div>
-    <div class="card-body">
-      <h2>Coming soon</h2>
-      <p>A new game is brewing. Check back later!</p>
-    </div>
-  </div>
-
-  <div class="game-card soon">
-    <div class="thumb soon-thumb"><span>?</span></div>
-    <div class="card-body">
-      <h2>Coming soon</h2>
-      <p>A new game is brewing. Check back later!</p>
-    </div>
-  </div>
-
-</main>
-
-<!-- Fullscreen game overlay -->
-<div class="game-overlay" id="gameOverlay" aria-hidden="true">
+<!-- ══════════ THE TIMELINE ══════════ -->
+<div id="gameView" hidden>
   <button class="back-pill" id="backBtn">&larr; FreshFun</button>
-  <iframe id="gameFrame" title="Game" allow="autoplay"></iframe>
+
+  <div class="page">
+    <header class="game-header">
+      <h1>The Timeline</h1>
+      <p class="sub">One tiny moment. Slide forward and watch the dominoes fall.</p>
+    </header>
+
+    <nav class="scenario-tabs" id="scenarioTabs" aria-label="Choose a scenario"></nav>
+
+    <section class="event-card">
+      <span class="eyebrow">The moment</span>
+      <p id="eventText" class="event-text"></p>
+
+      <div class="tweaks">
+        <span class="eyebrow">Tweak the moment</span>
+        <div class="chips" id="chips"></div>
+      </div>
+    </section>
+
+    <section class="slider-zone">
+      <div class="year-readout">
+        <span class="eyebrow">You are now in</span>
+        <div class="year" id="yearReadout">Today</div>
+      </div>
+
+      <input type="range" id="timeSlider" min="0" max="4" step="1" value="0"
+             aria-label="Travel through time">
+
+      <div class="stops">
+        <span>Now</span><span>+1 Day</span><span>+1 Year</span><span>+10 Years</span><span>+100 Years</span>
+      </div>
+    </section>
+
+    <section class="chain" id="chain" aria-live="polite"></section>
+
+    <p class="hint" id="hint">Slide the bar forward to begin &rarr;</p>
+  </div>
 </div>
 
 <script src="script.js"></script>
