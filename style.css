@@ -14,12 +14,19 @@ body.view-hub {
   color:#2b3a55;
 }
 
-/* ── game theme: sky deepens as you travel further ── */
+/* ── timeline theme: sky deepens as you travel further ── */
 body.view-game.t0 { background:linear-gradient(180deg,#3d6fb8 0%,#6fa3e0 60%,#a8c8ec 100%); color:#eef3fa; }
 body.view-game.t1 { background:linear-gradient(180deg,#2e4f9e 0%,#4f76c4 60%,#8fb0e0 100%); color:#eef3fa; }
 body.view-game.t2 { background:linear-gradient(180deg,#2a3a86 0%,#45539f 60%,#7c86c8 100%); color:#eef3fa; }
 body.view-game.t3 { background:linear-gradient(180deg,#1d224f 0%,#33306e 60%,#5b4f96 100%); color:#eef3fa; }
 body.view-game.t4 { background:linear-gradient(180deg,#0b0d24 0%,#1c1740 60%,#3a2a63 100%); color:#eef3fa; }
+
+/* ── bullseye theme: warm field-journal paper ── */
+body.view-bullseye {
+  background:#f7f1e6;
+  background-image:repeating-linear-gradient(0deg, rgba(90,70,40,0.035) 0px, rgba(90,70,40,0.035) 1px, transparent 1px, transparent 28px);
+  color:#3a2f22;
+}
 
 /* ══════════ HUB ══════════ */
 header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36px); }
@@ -63,6 +70,7 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
   overflow:hidden;
 }
 .thumb canvas { width:100%; height:100%; display:block; }
+.bullseye-thumb svg { width:76px; height:76px; color:#2f8fff; }
 .soon-thumb span {
   font-family:'Fredoka',sans-serif; font-size:56px; font-weight:600;
   color:#c3cfe0;
@@ -82,7 +90,7 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
   box-shadow:0 4px 12px rgba(47,143,255,0.35);
 }
 
-/* ══════════ THE TIMELINE ══════════ */
+/* ══════════ SHARED GAME CHROME ══════════ */
 .back-pill {
   position:fixed; top:14px; left:14px; z-index:5;
   font-family:'Nunito',sans-serif; font-weight:800; font-size:14px;
@@ -109,10 +117,11 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
 .game-header h1 {
   font-family:'Fredoka',sans-serif; font-weight:700;
   font-size:clamp(34px,8vw,52px); line-height:1;
-  text-shadow:0 2px 20px rgba(0,0,0,0.25);
+  text-shadow:0 2px 20px rgba(0,0,0,0.18);
 }
 .game-header .sub { margin-top:10px; font-weight:600; opacity:0.85; font-size:15px; }
 
+/* ══════════ THE TIMELINE ══════════ */
 .scenario-tabs {
   display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
   margin-bottom:22px;
@@ -227,8 +236,98 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
 .hint { text-align:center; margin-top:26px; font-weight:800; font-size:14px; opacity:0.8; }
 .hint.hidden { display:none; }
 
+/* ══════════ THE BULLSEYE ══════════ */
+.specimen-card {
+  background:#fffaf0; color:#3a2f22;
+  border:2px solid #d8c9a8;
+  border-radius:18px;
+  padding:28px 26px;
+  text-align:center;
+  box-shadow:0 10px 26px rgba(58,47,34,0.18);
+}
+.specimen-card .eyebrow { color:#9c8560; opacity:1; }
+.specimen-illustration {
+  width:140px; height:140px; margin:14px auto 10px;
+  color:#3a2f22;
+}
+.specimen-illustration svg { width:100%; height:100%; }
+.specimen-word {
+  font-family:'Fredoka',sans-serif; font-weight:700;
+  font-size:clamp(28px,6vw,40px);
+  text-transform:capitalize;
+  margin-bottom:22px;
+  letter-spacing:0.02em;
+}
+.answer-label {
+  display:block; font-weight:800; font-size:13.5px;
+  margin-bottom:8px; color:#6b5b40; text-align:left;
+}
+#answerBox {
+  width:100%; resize:vertical; min-height:80px;
+  font-family:'Nunito',sans-serif; font-size:15px;
+  padding:14px 16px; border-radius:14px;
+  border:2px solid #d8c9a8; background:#fffef9;
+  color:#3a2f22; outline:none;
+  transition:border-color 0.15s ease;
+}
+#answerBox:focus { border-color:#2f8fff; }
+.grade-btn {
+  margin-top:16px;
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:15px;
+  background:#2f8fff; color:#fff; border:none;
+  border-radius:999px; padding:12px 30px; cursor:pointer;
+  box-shadow:0 6px 16px rgba(47,143,255,0.35);
+  transition:transform 0.15s ease;
+}
+.grade-btn:hover { transform:translateY(-2px); }
+.grade-btn:focus-visible { outline:3px solid #2f8fff; outline-offset:3px; }
+
+.result-card {
+  margin-top:24px;
+  background:#fffaf0; color:#3a2f22;
+  border:2px solid #d8c9a8;
+  border-radius:18px;
+  padding:26px; text-align:center;
+  box-shadow:0 10px 26px rgba(58,47,34,0.18);
+}
+.score-ring {
+  --pct:0; --ring-color:#2f8fff;
+  width:130px; height:130px; border-radius:50%;
+  margin:0 auto 16px;
+  display:flex; align-items:center; justify-content:center;
+  background:conic-gradient(var(--ring-color) calc(var(--pct) * 1%), #e7dcc4 0);
+  position:relative;
+}
+.score-ring::before {
+  content:""; position:absolute; inset:9px;
+  background:#fffaf0; border-radius:50%;
+}
+.score-num {
+  position:relative; z-index:1;
+  font-family:'Fredoka',sans-serif; font-weight:700; font-size:28px;
+}
+.score-feedback { font-weight:700; font-size:15.5px; margin-bottom:16px; }
+.traits {
+  display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+  margin-bottom:20px;
+}
+.trait {
+  font-size:12.5px; font-weight:800; padding:6px 12px;
+  border-radius:999px;
+}
+.trait.hit { background:#e3f7ec; color:#1f8a56; }
+.trait.miss { background:#fbe7e2; color:#c1503a; }
+.next-btn {
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:14.5px;
+  background:#3a2f22; color:#fffaf0; border:none;
+  border-radius:999px; padding:11px 26px; cursor:pointer;
+  transition:transform 0.15s ease;
+}
+.next-btn:hover { transform:translateY(-2px); }
+.next-btn:focus-visible { outline:3px solid #2f8fff; outline-offset:3px; }
+
 @media (prefers-reduced-motion: reduce) {
-  body, .game-card, .back-pill { transition:none; }
+  body, .game-card, .back-pill, .grade-btn, .next-btn { transition:none; }
   .link { animation:none; opacity:1; transform:none; }
   .link.ripple { animation:none; }
 }
