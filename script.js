@@ -6,7 +6,8 @@ const viewEls = {
   pull: document.getElementById('pullView'),
   shade: document.getElementById('shadeView'),
   recall: document.getElementById('recallView'),
-  flags: document.getElementById('flagsView')
+  flags: document.getElementById('flagsView'),
+  draw: document.getElementById('drawView')
 };
 
 function showPanel(name) {
@@ -1384,3 +1385,247 @@ function finishFlags() {
 }
 
 flagsReplayBtn.addEventListener('click', openFlags);
+
+// ═══════════════════ THE DRAW ═══════════════════
+// No backend, no API key exposed in a public static site — so instead of
+// true image recognition, drawings are scored against a per-prompt target
+// profile built from measurable shape data captured while drawing:
+// bounding-box proportions, how much of the canvas got used, how many
+// separate strokes were drawn (a rough proxy for detail), and left-right
+// symmetry. Each is compared to a plausible range for that prompt and
+// blended into a 0-100 score with a breakdown of what matched.
+
+const DRAW_PROMPTS = [
+  { text: "a circle",    aspect: [0.75, 1.35], strokes: [1, 3],  size: [0.10, 0.55], symmetry: [0.50, 1.00] },
+  { text: "the sun",     aspect: [0.70, 1.40], strokes: [2, 10], size: [0.15, 0.65], symmetry: [0.40, 1.00] },
+  { text: "a heart",     aspect: [0.80, 1.30], strokes: [1, 4],  size: [0.10, 0.55], symmetry: [0.55, 1.00] },
+  { text: "a star",      aspect: [0.75, 1.30], strokes: [1, 3],  size: [0.10, 0.50], symmetry: [0.50, 1.00] },
+  { text: "a house",     aspect: [0.90, 1.60], strokes: [3, 12], size: [0.15, 0.60], symmetry: [0.35, 1.00] },
+  { text: "a tree",      aspect: [0.40, 0.90], strokes: [2, 10], size: [0.15, 0.65], symmetry: [0.35, 1.00] },
+  { text: "a cat",       aspect: [0.80, 1.60], strokes: [4, 16], size: [0.15, 0.60], symmetry: [0.25, 0.85] },
+  { text: "a fish",      aspect: [1.30, 3.00], strokes: [2, 10], size: [0.10, 0.55], symmetry: [0.20, 0.70] },
+  { text: "an umbrella", aspect: [0.70, 1.30], strokes: [2, 8],  size: [0.15, 0.60], symmetry: [0.45, 1.00] },
+  { text: "a sailboat",  aspect: [1.30, 2.80], strokes: [2, 10], size: [0.10, 0.55], symmetry: [0.25, 0.75] },
+  { text: "a snowman",   aspect: [0.50, 1.00], strokes: [3, 14], size: [0.15, 0.65], symmetry: [0.35, 0.90] },
+  { text: "a flower",    aspect: [0.60, 1.30], strokes: [2, 12], size: [0.10, 0.55], symmetry: [0.40, 1.00] },
+  { text: "a rocket",    aspect: [0.30, 0.70], strokes: [2, 10], size: [0.15, 0.60], symmetry: [0.40, 1.00] },
+  { text: "a butterfly", aspect: [1.00, 2.00], strokes: [2, 10], size: [0.15, 0.60], symmetry: [0.50, 1.00] },
+  { text: "a car",       aspect: [1.40, 3.00], strokes: [3, 14], size: [0.15, 0.60], symmetry: [0.25, 0.75] },
+  { text: "a mountain",  aspect: [1.20, 3.00], strokes: [1, 6],  size: [0.15, 0.65], symmetry: [0.20, 0.70] },
+  { text: "a clock",     aspect: [0.75, 1.35], strokes: [2, 8],  size: [0.10, 0.50], symmetry: [0.40, 1.00] },
+  { text: "a robot",     aspect: [0.60, 1.30], strokes: [4, 18], size: [0.15, 0.65], symmetry: [0.30, 0.85] }
+];
+
+let dPromptOrder = [];
+let dPos = 0;
+let dIdx = 0;
+let dStrokes = [];
+let dCurrentStroke = null;
+let dDrawing = false;
+
+const drawPromptNum      = document.getElementById('drawPromptNum');
+const drawPromptWord     = document.getElementById('drawPromptWord');
+const drawCanvas         = document.getElementById('drawCanvas');
+const drawCtx            = drawCanvas.getContext('2d');
+const drawUndoBtn        = document.getElementById('drawUndoBtn');
+const drawClearBtn       = document.getElementById('drawClearBtn');
+const drawGradeBtn       = document.getElementById('drawGradeBtn');
+const drawResultCard     = document.getElementById('drawResultCard');
+const drawScoreRing      = document.getElementById('drawScoreRing');
+const drawScoreNum       = document.getElementById('drawScoreNum');
+const drawScoreFeedback  = document.getElementById('drawScoreFeedback');
+const drawTraitsList     = document.getElementById('drawTraitsList');
+const drawNextBtn        = document.getElementById('drawNextBtn');
+
+function openDraw() {
+  showPanel('draw');
+  document.body.className = 'view-draw';
+  dPromptOrder = shuffledOrder(DRAW_PROMPTS.length);
+  dPos = 0;
+  loadDrawPrompt();
+}
+document.getElementById('playDraw').addEventListener('click', openDraw);
+
+function loadDrawPrompt() {
+  if (dPos >= dPromptOrder.length) {
+    dPromptOrder = shuffledOrder(DRAW_PROMPTS.length);
+    dPos = 0;
+  }
+  dIdx = dPromptOrder[dPos];
+  drawPromptNum.textContent = "Prompt No. " + (dPos + 1);
+  drawPromptWord.textContent = DRAW_PROMPTS[dIdx].text;
+  clearDrawCanvas();
+  drawResultCard.hidden = true;
+}
+
+function drawStrokeStyle() {
+  drawCtx.strokeStyle = '#2b3a55';
+  drawCtx.lineWidth = 5;
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+}
+
+function drawCanvasPoint(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  const scaleX = drawCanvas.width / rect.width;
+  const scaleY = drawCanvas.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+function drawPointerDown(e) {
+  e.preventDefault();
+  dDrawing = true;
+  const p = drawCanvasPoint(e);
+  dCurrentStroke = [p];
+  drawStrokeStyle();
+  drawCtx.beginPath();
+  drawCtx.moveTo(p.x, p.y);
+  if (drawCanvas.setPointerCapture) drawCanvas.setPointerCapture(e.pointerId);
+}
+
+function drawPointerMove(e) {
+  if (!dDrawing) return;
+  const p = drawCanvasPoint(e);
+  drawCtx.lineTo(p.x, p.y);
+  drawCtx.stroke();
+  dCurrentStroke.push(p);
+}
+
+function drawPointerUp() {
+  if (!dDrawing) return;
+  dDrawing = false;
+  if (dCurrentStroke && dCurrentStroke.length > 1) {
+    dStrokes.push(dCurrentStroke);
+  }
+  dCurrentStroke = null;
+}
+
+drawCanvas.addEventListener('pointerdown', drawPointerDown);
+drawCanvas.addEventListener('pointermove', drawPointerMove);
+drawCanvas.addEventListener('pointerup', drawPointerUp);
+drawCanvas.addEventListener('pointercancel', drawPointerUp);
+drawCanvas.addEventListener('pointerleave', drawPointerUp);
+
+function clearDrawCanvas() {
+  drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+  dStrokes = [];
+  dCurrentStroke = null;
+}
+
+function redrawDrawStrokes() {
+  drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+  drawStrokeStyle();
+  dStrokes.forEach(stroke => {
+    drawCtx.beginPath();
+    drawCtx.moveTo(stroke[0].x, stroke[0].y);
+    for (let i = 1; i < stroke.length; i++) drawCtx.lineTo(stroke[i].x, stroke[i].y);
+    drawCtx.stroke();
+  });
+}
+
+function undoDrawStroke() {
+  dStrokes.pop();
+  redrawDrawStrokes();
+}
+
+function drawRangeScore(value, range) {
+  const [lo, hi] = range;
+  if (value >= lo && value <= hi) return 1;
+  const span = (hi - lo) || 1;
+  const dist = value < lo ? (lo - value) : (value - hi);
+  return Math.max(0, 1 - dist / span);
+}
+
+function drawSymmetryScore(points, centerX, refSize) {
+  if (points.length < 2) return 0;
+  const step = Math.max(1, Math.ceil(points.length / 260));
+  const sample = points.filter((_, i) => i % step === 0);
+  const tolerance = Math.max(refSize * 0.06, 6);
+  let matched = 0;
+  sample.forEach(p => {
+    const mirroredX = 2 * centerX - p.x;
+    let found = false;
+    for (let i = 0; i < sample.length; i++) {
+      const q = sample[i];
+      const dx = q.x - mirroredX, dy = q.y - p.y;
+      if (dx * dx + dy * dy <= tolerance * tolerance) { found = true; break; }
+    }
+    if (found) matched++;
+  });
+  return matched / sample.length;
+}
+
+function gradeDrawing() {
+  if (dStrokes.length === 0) {
+    drawCanvas.focus();
+    return;
+  }
+  const prompt = DRAW_PROMPTS[dIdx];
+  const allPoints = dStrokes.flat();
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  allPoints.forEach(p => {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  });
+  const bboxW = Math.max(maxX - minX, 4);
+  const bboxH = Math.max(maxY - minY, 4);
+  const aspect = bboxW / bboxH;
+  const sizeFraction = (bboxW * bboxH) / (drawCanvas.width * drawCanvas.height);
+  const strokeCount = dStrokes.length;
+  const symmetry = drawSymmetryScore(allPoints, minX + bboxW / 2, Math.max(bboxW, bboxH));
+
+  const scores = {
+    "Proportions": drawRangeScore(aspect, prompt.aspect),
+    "Canvas use": drawRangeScore(sizeFraction, prompt.size),
+    "Detail level": drawRangeScore(strokeCount, prompt.strokes),
+    "Symmetry": drawRangeScore(symmetry, prompt.symmetry)
+  };
+
+  const total = Object.values(scores).reduce((a, b) => a + b, 0) / 4;
+  const finalScore = Math.round(total * 100);
+
+  showDrawResult(finalScore, scores, prompt.text);
+}
+
+function showDrawResult(finalScore, scores, promptText) {
+  let color;
+  if (finalScore >= 90) color = "#3ecf8e";
+  else if (finalScore >= 70) color = "#7bc86c";
+  else if (finalScore >= 45) color = "#ffb648";
+  else if (finalScore >= 20) color = "#ff8a5c";
+  else color = "#e8604c";
+
+  drawScoreRing.style.setProperty('--pct', finalScore);
+  drawScoreRing.style.setProperty('--ring-color', color);
+  drawScoreNum.textContent = finalScore + "/100";
+
+  let feedback;
+  if (finalScore >= 90) feedback = "That's a strong match for " + promptText + ".";
+  else if (finalScore >= 70) feedback = "Pretty close to " + promptText + " — just a little off.";
+  else if (finalScore >= 45) feedback = "On the right track, but the shape isn't quite there yet.";
+  else if (finalScore >= 20) feedback = "A rough sketch of " + promptText + " — needs more shape and detail.";
+  else feedback = "That's pretty far from " + promptText + ". Give it another try.";
+  drawScoreFeedback.textContent = feedback;
+
+  drawTraitsList.innerHTML = "";
+  Object.entries(scores).forEach(([label, s]) => {
+    const chip = document.createElement('span');
+    const hit = s >= 0.55;
+    chip.className = "trait " + (hit ? "hit" : "miss");
+    chip.textContent = (hit ? "✓ " : "✕ ") + label;
+    drawTraitsList.appendChild(chip);
+  });
+
+  drawResultCard.hidden = false;
+}
+
+drawGradeBtn.addEventListener('click', gradeDrawing);
+drawClearBtn.addEventListener('click', () => { clearDrawCanvas(); drawResultCard.hidden = true; });
+drawUndoBtn.addEventListener('click', undoDrawStroke);
+drawNextBtn.addEventListener('click', () => { dPos++; loadDrawPrompt(); });
