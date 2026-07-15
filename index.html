@@ -99,6 +99,21 @@
         <span class="play-pill">Play</span>
       </div>
     </button>
+
+    <button class="game-card" id="playDraw">
+      <div class="thumb draw-thumb">
+        <svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M40 160 Q65 70 135 45"/>
+          <path d="M120 38 L152 30 L145 62 Z" fill="currentColor" stroke="none"/>
+          <path d="M33 167 L44 154 L52 165 L41 176 Z" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <h2>The Draw</h2>
+        <p>You get a prompt and a blank canvas. Sketch your best shot — then see how close you got.</p>
+        <span class="play-pill">Play</span>
+      </div>
+    </button>
   </main>
 </div>
 
@@ -310,6 +325,43 @@
       <div class="shade-final-score" id="flagsFinalScore">0 / 30</div>
       <p class="shade-final-msg" id="flagsFinalMsg"></p>
       <button class="grade-btn" id="flagsReplayBtn">Play again</button>
+    </section>
+  </div>
+</div>
+
+<!-- ══════════ THE DRAW ══════════ -->
+<div id="drawView" hidden>
+  <button class="back-pill" id="backBtnDraw">&larr; FreshFun</button>
+
+  <div class="page">
+    <header class="game-header">
+      <h1>The Draw</h1>
+      <p class="sub">Sketch the prompt. Get scored on shape, size, detail, and symmetry.</p>
+    </header>
+
+    <section class="specimen-card">
+      <span class="eyebrow" id="drawPromptNum">Prompt No. 1</span>
+      <h2 class="specimen-word" id="drawPromptWord">a circle</h2>
+
+      <div class="draw-canvas-wrap">
+        <canvas id="drawCanvas" width="480" height="360"></canvas>
+      </div>
+
+      <div class="draw-toolbar">
+        <button class="draw-tool-btn" id="drawUndoBtn">Undo stroke</button>
+        <button class="draw-tool-btn" id="drawClearBtn">Clear</button>
+      </div>
+
+      <button class="grade-btn" id="drawGradeBtn">Grade my drawing</button>
+    </section>
+
+    <section class="result-card" id="drawResultCard" hidden>
+      <div class="score-ring" id="drawScoreRing">
+        <span class="score-num" id="drawScoreNum">0/100</span>
+      </div>
+      <p class="score-feedback" id="drawScoreFeedback"></p>
+      <div class="traits" id="drawTraitsList"></div>
+      <button class="next-btn" id="drawNextBtn">Next prompt &rarr;</button>
     </section>
   </div>
 </div>
