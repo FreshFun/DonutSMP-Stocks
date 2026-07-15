@@ -1,3 +1,6 @@
+Here's the complete, current `style.css` — copy all of it:
+
+```css
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body { width:100%; min-height:100%; }
 body {
@@ -62,6 +65,14 @@ body.view-recall {
   color:#2b3a55;
 }
 
+/* ── flags theme: same light neutral as hub ── */
+body.view-flags {
+  background:#f4f7fb;
+  background-image:radial-gradient(rgba(120,150,200,0.12) 1.5px, transparent 1.5px);
+  background-size:26px 26px;
+  color:#2b3a55;
+}
+
 /* ══════════ HUB ══════════ */
 header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36px); }
 .logo {
@@ -106,6 +117,8 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
 .pull-thumb svg { width:64px; height:64px; color:#ffb648; }
 .shade-thumb svg { width:100px; height:100px; }
 .recall-thumb svg { width:110px; height:110px; }
+.flag-thumb { gap:6px; }
+.flag-thumb span { font-size:52px; line-height:1; }
 
 .card-body { padding:18px 20px 22px; }
 .card-body h2 {
@@ -538,6 +551,13 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
 }
 .shade-final-msg { font-weight:700; opacity:0.8; margin-bottom:22px; }
 
+/* ══════════ THE FLAGS ══════════ */
+.flag-display {
+  font-size:clamp(80px,20vw,120px);
+  line-height:1;
+  margin-bottom:22px;
+}
+
 /* ══════════ THE RECALL ══════════ */
 .recall-card {
   background:#ffffff; color:#2b3a55;
@@ -609,3 +629,4 @@ header { text-align:center; padding:clamp(48px,9vh,90px) 20px clamp(20px,4vh,36p
   .recall-noise-letter { animation:none; opacity:0.4; }
   .recall-timer-fill { transition:none !important; }
 }
+```
