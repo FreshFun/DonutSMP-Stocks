@@ -44,13 +44,19 @@
       </div>
     </button>
 
-    <div class="game-card soon">
-      <div class="thumb soon-thumb"><span>?</span></div>
-      <div class="card-body">
-        <h2>Coming soon</h2>
-        <p>A new game is brewing. Check back later!</p>
+    <button class="game-card" id="playPull">
+      <div class="thumb pull-thumb">
+        <svg viewBox="0 0 200 200" fill="currentColor">
+          <path d="M100 25 C104 70 100 96 100 100 C100 104 104 130 100 175 C96 130 100 104 100 100 C100 96 96 70 100 25 Z"/>
+          <path d="M25 100 C70 96 96 100 100 100 C104 100 130 96 175 100 C130 104 104 100 100 100 C96 100 70 104 25 100 Z"/>
+        </svg>
       </div>
-    </div>
+      <div class="card-body">
+        <h2>The Pull</h2>
+        <p>Are you lucky? Press the button and see what rarity fate hands you — from Common to Singularity.</p>
+        <span class="play-pill">Play</span>
+      </div>
+    </button>
   </main>
 </div>
 
@@ -124,6 +130,35 @@
       <div class="traits" id="traitsList"></div>
       <button class="next-btn" id="nextBtn">Next word &rarr;</button>
     </section>
+  </div>
+</div>
+
+<!-- ══════════ THE PULL ══════════ -->
+<div id="pullView" hidden>
+  <button class="back-pill" id="backBtnPull">&larr; FreshFun</button>
+
+  <div class="page">
+    <header class="game-header">
+      <h1>The Pull</h1>
+      <p class="sub">Are you lucky? Press the button and see what fate hands you.</p>
+    </header>
+
+    <div class="pull-stage">
+      <div class="pull-orb" id="pullOrb"></div>
+      <div class="pull-result" id="pullResult" hidden>
+        <span class="pull-tier" id="pullTier">Common</span>
+        <p class="pull-odds" id="pullOdds">1 in 2 chance</p>
+      </div>
+    </div>
+
+    <button class="pull-btn" id="pullBtn">Pull</button>
+
+    <div class="pull-stats">
+      <span>Pulls: <strong id="pullCount">0</strong></span>
+      <span>Best so far: <strong id="pullBest">—</strong></span>
+    </div>
+
+    <div class="pull-legend" id="pullLegend"></div>
   </div>
 </div>
 
