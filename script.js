@@ -1,3 +1,200 @@
+// ═══════════════════ SFX ENGINE (Web Audio, no files needed) ═══════════════════
+const SFX = (() => {
+  let ctx = null;
+  let muted = false;
+  try { muted = localStorage.getItem('ffx-muted') === '1'; } catch (e) {}
+
+  function ac() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function tone(opts) {
+    if (muted) return;
+    const c = ac();
+    if (!c) return;
+    const { freq = 440, type = 'sine', dur = 0.15, vol = 0.18, slide = 0, delay = 0 } = opts;
+    const t0 = c.currentTime + delay;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(c.destination);
+    o.start(t0);
+    o.stop(t0 + dur + 0.05);
+  }
+
+  function splash(opts) { // filtered noise burst — whoosh / splash / pop
+    if (muted) return;
+    const c = ac();
+    if (!c) return;
+    const { dur = 0.25, vol = 0.12, freq = 1400, q = 1.2, delay = 0, slide = 0 } = opts || {};
+    const t0 = c.currentTime + delay;
+    const len = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const f = c.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(freq, t0);
+    if (slide) f.frequency.exponentialRampToValueAtTime(Math.max(80, freq + slide), t0 + dur);
+    f.Q.value = q;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f).connect(g).connect(c.destination);
+    src.start(t0);
+    src.stop(t0 + dur + 0.05);
+  }
+
+  return {
+    get muted() { return muted; },
+    setMuted(m) {
+      muted = m;
+      try { localStorage.setItem('ffx-muted', m ? '1' : '0'); } catch (e) {}
+    },
+    // classic aero water droplet — quick rising blip
+    click() {
+      tone({ freq: 620, type: 'sine', dur: 0.09, vol: 0.16, slide: 520 });
+    },
+    // bubbly toggle pop
+    pop() {
+      tone({ freq: 340, type: 'sine', dur: 0.07, vol: 0.16, slide: 260 });
+      splash({ dur: 0.06, vol: 0.05, freq: 2600 });
+    },
+    // slider notch tick
+    tick() {
+      tone({ freq: 900, type: 'triangle', dur: 0.05, vol: 0.1 });
+    },
+    // timeline whoosh forward through time
+    whoosh() {
+      splash({ dur: 0.4, vol: 0.1, freq: 500, slide: 1600, q: 0.8 });
+    },
+    correct() {
+      tone({ freq: 660, type: 'sine', dur: 0.12, vol: 0.16 });
+      tone({ freq: 990, type: 'sine', dur: 0.16, vol: 0.14, delay: 0.09 });
+    },
+    wrong() {
+      tone({ freq: 220, type: 'sawtooth', dur: 0.22, vol: 0.08, slide: -70 });
+    },
+    // graded reveal: pitch of the chime tracks the score
+    score(pct) {
+      if (pct >= 70) {
+        tone({ freq: 587, dur: 0.11, vol: 0.15 });
+        tone({ freq: 740, dur: 0.11, vol: 0.15, delay: 0.1 });
+        tone({ freq: 880, dur: 0.2, vol: 0.15, delay: 0.2 });
+      } else if (pct >= 45) {
+        tone({ freq: 494, dur: 0.12, vol: 0.14 });
+        tone({ freq: 622, dur: 0.18, vol: 0.14, delay: 0.11 });
+      } else {
+        tone({ freq: 260, type: 'triangle', dur: 0.24, vol: 0.12, slide: -80 });
+      }
+    },
+    // recall stimulus flash
+    flash() {
+      tone({ freq: 1040, type: 'sine', dur: 0.08, vol: 0.1 });
+    },
+    // question appears
+    prompt() {
+      tone({ freq: 520, type: 'triangle', dur: 0.08, vol: 0.1, slide: 180 });
+    },
+    // the pull: orb charging
+    spin() {
+      splash({ dur: 1.0, vol: 0.09, freq: 400, slide: 2600, q: 0.9 });
+    },
+    // the pull: quick flicker tick
+    flick() {
+      tone({ freq: 1200, type: 'square', dur: 0.03, vol: 0.035 });
+    },
+    // the pull: reveal, scaled by rarity index (0..12)
+    reveal(idx) {
+      if (idx <= 1) {
+        tone({ freq: 440, dur: 0.14, vol: 0.14 });
+        return;
+      }
+      const base = 440 + idx * 40;
+      const steps = Math.min(3 + Math.floor(idx / 3), 6);
+      for (let i = 0; i < steps; i++) {
+        tone({ freq: base * Math.pow(1.25, i), dur: 0.12, vol: 0.13, delay: i * 0.07 });
+      }
+      if (idx >= 9) { // prismatic and above: shimmer on top
+        for (let i = 0; i < 5; i++) {
+          tone({ freq: 1600 + Math.random() * 1400, dur: 0.1, vol: 0.06, delay: 0.25 + i * 0.06 });
+        }
+      }
+      if (idx === 12) { // singularity: deep boom
+        tone({ freq: 70, type: 'sine', dur: 0.7, vol: 0.28, slide: -30 });
+        splash({ dur: 0.7, vol: 0.14, freq: 300, slide: -220, q: 0.7 });
+      }
+    },
+    // end-of-quiz fanfare
+    fanfare() {
+      [523, 659, 784, 1047].forEach((f, i) =>
+        tone({ freq: f, dur: 0.16, vol: 0.14, delay: i * 0.11 })
+      );
+    }
+  };
+})();
+
+// mute toggle
+const muteBtn = document.getElementById('muteBtn');
+function renderMute() {
+  muteBtn.textContent = SFX.muted ? '🔇' : '🔊';
+  muteBtn.classList.toggle('muted', SFX.muted);
+  muteBtn.setAttribute('aria-pressed', String(SFX.muted));
+}
+muteBtn.addEventListener('click', () => {
+  SFX.setMuted(!SFX.muted);
+  renderMute();
+  if (!SFX.muted) SFX.pop();
+});
+renderMute();
+
+// universal droplet click for buttons (answer buttons make their own sounds instead)
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.closest('.shade-options') || b.classList.contains('poll-option') || b === muteBtn) return;
+  SFX.click();
+}, true);
+
+// ═══════════════════ RISING BUBBLES ═══════════════════
+(() => {
+  const layer = document.getElementById('bubbles');
+  if (!layer) return;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+
+  function spawnBubble() {
+    if (document.hidden) return;
+    const b = document.createElement('span');
+    b.className = 'bubble';
+    const size = 10 + Math.random() * 42;
+    b.style.width = size + 'px';
+    b.style.height = size + 'px';
+    b.style.left = Math.random() * 100 + '%';
+    b.style.setProperty('--sway', (Math.random() * 90 - 45) + 'px');
+    const dur = 9 + Math.random() * 12;
+    b.style.animationDuration = dur + 's';
+    layer.appendChild(b);
+    setTimeout(() => b.remove(), dur * 1000 + 300);
+  }
+
+  for (let i = 0; i < 6; i++) setTimeout(spawnBubble, i * 600);
+  setInterval(spawnBubble, 1700);
+})();
+
 // ═══════════════════ VIEW SWITCHING ═══════════════════
 const viewEls = {
   hub: document.getElementById('hubView'),
@@ -34,9 +231,9 @@ if (canvas) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let t = 0;
   const branches = [
-    { fork: 0.35, dy: -34, hue: '#ff8a5c' },
-    { fork: 0.55, dy:  30, hue: '#3ecf8e' },
-    { fork: 0.72, dy: -22, hue: '#b07cff' }
+    { fork: 0.35, dy: -34, hue: '#ef7a34' },
+    { fork: 0.55, dy:  30, hue: '#27a862' },
+    { fork: 0.72, dy: -22, hue: '#8a54e0' }
   ];
   function drawThumb() {
     ctx.clearRect(0, 0, W, H);
@@ -44,7 +241,7 @@ if (canvas) {
     const startX = 24, endX = W - 24;
     const span = endX - startX;
 
-    ctx.strokeStyle = '#2f8fff';
+    ctx.strokeStyle = '#0e8fdd';
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -75,15 +272,15 @@ if (canvas) {
       }
     });
 
-    ctx.fillStyle = '#c3cfe0';
+    ctx.fillStyle = '#9fc4e0';
     for (let i = 0; i <= 4; i++) {
       const x = startX + span * (i / 4);
       ctx.fillRect(x - 1, midY - 6, 2, 12);
     }
 
     const dx = startX + span * p;
-    ctx.fillStyle = '#2f8fff';
-    ctx.shadowColor = 'rgba(47,143,255,0.6)';
+    ctx.fillStyle = '#0e8fdd';
+    ctx.shadowColor = 'rgba(14,143,221,0.6)';
     ctx.shadowBlur = 10;
     ctx.beginPath();
     ctx.arc(dx, midY, 7, 0, Math.PI * 2);
@@ -246,6 +443,7 @@ function buildChips() {
       toggles[v.key] = !toggles[v.key];
       b.classList.toggle("on", toggles[v.key]);
       b.setAttribute("aria-pressed", String(toggles[v.key]));
+      SFX.pop();
       renderTimeline(true);
     });
     chipsEl.appendChild(b);
@@ -253,7 +451,10 @@ function buildChips() {
 }
 
 slider.addEventListener("input", () => {
-  stage = Number(slider.value);
+  const newStage = Number(slider.value);
+  if (newStage > stage) SFX.whoosh();
+  else if (newStage !== stage) SFX.tick();
+  stage = newStage;
   renderTimeline(false);
 });
 
@@ -571,11 +772,11 @@ function gradeAnswer() {
   score = Math.max(0, Math.min(100, Math.round(score)));
 
   let color, feedback;
-  if (score >= 90)      { color = "#3ecf8e"; feedback = "Nailed it — that's exactly what it is."; }
-  else if (score >= 70) { color = "#7bc86c"; feedback = "Really close — just missing a detail or two."; }
-  else if (score >= 45) { color = "#ffb648"; feedback = "On the right track, but still pretty general."; }
-  else if (score >= 20) { color = "#ff8a5c"; feedback = "Too vague — that could describe a bunch of things."; }
-  else                  { color = "#e8604c"; feedback = "Way too generic. What actually makes it unique?"; }
+  if (score >= 90)      { color = "#27a862"; feedback = "Nailed it — that's exactly what it is."; }
+  else if (score >= 70) { color = "#5fbf63"; feedback = "Really close — just missing a detail or two."; }
+  else if (score >= 45) { color = "#f0a428"; feedback = "On the right track, but still pretty general."; }
+  else if (score >= 20) { color = "#ef7a34"; feedback = "Too vague — that could describe a bunch of things."; }
+  else                  { color = "#d84a35"; feedback = "Way too generic. What actually makes it unique?"; }
 
   scoreRing.style.setProperty('--pct', score);
   scoreRing.style.setProperty('--ring-color', color);
@@ -596,6 +797,7 @@ function gradeAnswer() {
     traitsList.appendChild(chip);
   });
 
+  SFX.score(score);
   resultCard.hidden = false;
 }
 
@@ -638,7 +840,7 @@ let pullCountVal = 0;
 let bestIdx = -1;
 const discovered = new Set();
 
-const pullOrb      = document.getElementById('pullOrb');
+const pullOrb       = document.getElementById('pullOrb');
 const pullResult    = document.getElementById('pullResult');
 const pullTier      = document.getElementById('pullTier');
 const pullOdds      = document.getElementById('pullOdds');
@@ -662,8 +864,8 @@ function buildLegend() {
 
 function legendColor(key) {
   const map = {
-    common: "#9aa4b2", uncommon: "#3ecf8e", unusual: "#2bc4c4", rare: "#2f8fff",
-    veryrare: "#8a5cff", epic: "#c23cff", legendary: "#ffb648", mythical: "#ff4d6d",
+    common: "#a9c3d8", uncommon: "#4fe3a1", unusual: "#3bd6d6", rare: "#54b4ff",
+    veryrare: "#9a74ff", epic: "#cf58ff", legendary: "#ffb648", mythical: "#ff4d6d",
     ethereal: "#b8faff", prismatic: "#ff8fd6", ultra: "#00e5ff", quantum: "#c86bff",
     singularity: "#ffffff"
   };
@@ -708,6 +910,7 @@ function doPull() {
   pullOrb.classList.remove('spinning');
   void pullOrb.offsetWidth; // restart animation
   pullOrb.classList.add('spinning');
+  SFX.spin();
 
   const finalIdx = weightedPick();
   const flickerMs = 1100;
@@ -719,6 +922,7 @@ function doPull() {
     pullTier.textContent = r.name;
     pullTier.className = "pull-tier tier-" + r.key;
     pullResult.hidden = false;
+    if ((elapsed / stepMs) % 2 === 0) SFX.flick();
     elapsed += stepMs;
     if (elapsed >= flickerMs) {
       clearInterval(flicker);
@@ -745,6 +949,8 @@ function reveal(idx) {
 
   discovered.add(idx);
   updateLegend();
+
+  SFX.reveal(idx);
 
   if (idx >= 5) { // Epic and above get a particle burst
     const colors = TIER_PARTICLE_COLORS[r.key] || ["#ffffff"];
@@ -909,7 +1115,7 @@ function answerShade(chosen, btnEl) {
   shadeAnswered = true;
   const c = SHADE_COLORS[shadeIndex];
   const isCorrect = chosen === c.name;
-  if (isCorrect) shadeScore++;
+  if (isCorrect) { shadeScore++; SFX.correct(); } else { SFX.wrong(); }
 
   [...shadeOptions.children].forEach(btn => {
     btn.disabled = true;
@@ -945,6 +1151,7 @@ function finishShade() {
   else if (pct >= 0.5) msg = "Solid run. The tricky shades in the back half are rough.";
   else msg = "Those late-game traps are brutal — give it another go.";
   shadeFinalMsg.textContent = msg;
+  SFX.fanfare();
 }
 
 shadeReplayBtn.addEventListener('click', openShade);
@@ -1139,6 +1346,7 @@ function loadRecallQuestion() {
 
   spawnRecallNoise(recallCurrent.noise);
   recallCurrent.render();
+  SFX.flash();
 
   recallTimerFillEl.classList.remove('phase-blank');
   const total = recallCurrent.hold + recallCurrent.blank;
@@ -1169,13 +1377,14 @@ function showRecallQuestion() {
     recallOptionsEl.appendChild(btn);
   });
   recallQuestionEl.hidden = false;
+  SFX.prompt();
 }
 
 function answerRecall(chosen, btnEl) {
   if (recallAnswered) return;
   recallAnswered = true;
   const isCorrect = chosen === recallCurrent.correct;
-  if (isCorrect) recallScore++;
+  if (isCorrect) { recallScore++; SFX.correct(); } else { SFX.wrong(); }
 
   [...recallOptionsEl.children].forEach(btn => {
     btn.disabled = true;
@@ -1214,6 +1423,7 @@ function finishRecall() {
   else if (pct >= 0.5) msg = "Solid effort. Those multi-letter rounds at the end are brutal.";
   else msg = "The distractions got you — give it another run.";
   recallFinalMsg.textContent = msg;
+  SFX.fanfare();
 }
 
 recallReplayBtn.addEventListener('click', openRecall);
@@ -1347,7 +1557,7 @@ function answerFlag(chosen, btnEl) {
   flagsAnswered = true;
   const f = FLAG_QUESTIONS[flagsIndex];
   const isCorrect = chosen === f.name;
-  if (isCorrect) flagsScore++;
+  if (isCorrect) { flagsScore++; SFX.correct(); } else { SFX.wrong(); }
 
   [...flagsOptionsEl.children].forEach(btn => {
     btn.disabled = true;
@@ -1383,6 +1593,7 @@ function finishFlags() {
   else if (pct >= 0.5) msg = "Solid run. Those last few lookalike flags are brutal.";
   else msg = "The final stretch is a trap by design — give it another go.";
   flagsFinalMsg.textContent = msg;
+  SFX.fanfare();
 }
 
 flagsReplayBtn.addEventListener('click', openFlags);
@@ -1460,7 +1671,7 @@ function loadDrawPrompt() {
 }
 
 function drawStrokeStyle() {
-  drawCtx.strokeStyle = '#2b3a55';
+  drawCtx.strokeStyle = '#123c63';
   drawCtx.lineWidth = 5;
   drawCtx.lineCap = 'round';
   drawCtx.lineJoin = 'round';
@@ -1596,11 +1807,11 @@ function gradeDrawing() {
 
 function showDrawResult(finalScore, scores, promptText) {
   let color;
-  if (finalScore >= 90) color = "#3ecf8e";
-  else if (finalScore >= 70) color = "#7bc86c";
-  else if (finalScore >= 45) color = "#ffb648";
-  else if (finalScore >= 20) color = "#ff8a5c";
-  else color = "#e8604c";
+  if (finalScore >= 90) color = "#27a862";
+  else if (finalScore >= 70) color = "#5fbf63";
+  else if (finalScore >= 45) color = "#f0a428";
+  else if (finalScore >= 20) color = "#ef7a34";
+  else color = "#d84a35";
 
   drawScoreRing.style.setProperty('--pct', finalScore);
   drawScoreRing.style.setProperty('--ring-color', color);
@@ -1623,6 +1834,7 @@ function showDrawResult(finalScore, scores, promptText) {
     drawTraitsList.appendChild(chip);
   });
 
+  SFX.score(finalScore);
   drawResultCard.hidden = false;
 }
 
@@ -1742,7 +1954,7 @@ function selectPollOption(choice) {
   const item = POLL_ITEMS[pollIndex];
   const winner = item.a.pct >= item.b.pct ? 'a' : 'b';
   const isCorrect = choice === winner;
-  if (isCorrect) pollScore++;
+  if (isCorrect) { pollScore++; SFX.correct(); } else { SFX.wrong(); }
 
   pollOptionA.disabled = true;
   pollOptionB.disabled = true;
@@ -1790,6 +2002,7 @@ function finishPoll() {
   else if (pct >= 0.5) msg = "Decent run. The close ones near the end are genuine coin flips.";
   else msg = "Popularity is tricky to guess — give it another go.";
   pollFinalMsg.textContent = msg;
+  SFX.fanfare();
 }
 
 pollReplayBtn.addEventListener('click', openPoll);
